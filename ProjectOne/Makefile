@@ -1,7 +1,6 @@
-all: projectOne
-
+all: firstProject
 clean: 
-	rm projectOne
+	rm firstProject
 
 projectOne: 
-	gcc -Wall -o projectOne firstProject.c
+	gcc -g -Wall -o firstProject firstProject.c
