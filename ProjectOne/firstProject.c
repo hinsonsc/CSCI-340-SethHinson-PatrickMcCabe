@@ -2,6 +2,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <ctype.h>
+
 /*
 Seth Hinson & Patrick McCabe
 CSCI 340 Project One, Spring 2020
@@ -27,13 +28,27 @@ Main function to initialize program and parse through /proc
 int main(int argc, char *argv[]){
     
     DIR *dr = opendir("/proc"); 
-
+    
     //parsing through /proc for PID directories
     while ((de = readdir(dr)) != NULL){ 
-        char temp[16];
-        strcpy(temp, de->d_name);
-        if (isdigit(temp[0])){
+        
+        char pid[sizeof(de->d_name)];
+        strcpy(pid, de->d_name);
 
+        if (isdigit(pid[0])){
+            char filepath [32]; 
+            strcat(filepath, "/proc/");
+            strcat(filepath, pid);
+            strcat(filepath, "/stat");
+
+            //debugging print statement
+            //printf("filepath: %s\n", filepath);
+
+            FILE *file;
+            char buf[255];
+            file = fopen(filepath, "r");
+
+            memset(&filepath[0], 0, 32);
             //printf("%s\n", temp);    
         }
         
