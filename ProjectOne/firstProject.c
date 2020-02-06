@@ -1,8 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
 #include <ctype.h>
-
+#include <regex.h>
 /*
 Seth Hinson & Patrick McCabe
 CSCI 340 Project One, Spring 2020
@@ -47,7 +48,7 @@ int main(int argc, char *argv[]){
             //operations to open the file
             FILE *file;
             char buf[255];
-            printf("filepath: %s\n", filepath)
+            printf("filepath: %s\n", filepath);
             file = fopen(filepath, "r");
             
             // dummy variables for parsing 
@@ -59,25 +60,51 @@ int main(int argc, char *argv[]){
             char tempc;
             //real variables
             unsigned int PID;
-            char COMM;
+            char * COMM = malloc(32 * sizeof(char));
             int PPID;
             long unsigned MEMORY;
-
+            char check[] = ")";
+            char * r;
+            
             fscanf(file, "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld %ld %ld %llu %lu %ld %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %d %d %u %u %llu %lu %ld %lu %lu %lu %lu %lu %lu %lu %d", 
-            &PID, &COMM, &tempc, &tempd, &tempd, &tempd, &tempd, &tempd, &tempu, &templu, &templu, &templu, &templu, &templu, &templu, &templd, &templd, &templd, &templd, &templd, &templd, 
+            &PID, COMM, &tempc, &PPID, &tempd, &tempd, &tempd, &tempd, &tempu, &templu, &templu, &templu, &templu, &templu, &templu, &templd, &templd, &templd, &templd, &templd, &templd, 
             &templlu, &MEMORY, &templd, &templu, &templu, &templu, &templu, &templu, &templu, &templu, &templu, &templu, &templu, &templu, &templu, &templu, &tempd, &tempd, &tempu, &tempu,
             &templlu, &templu, &templd, &templu, &templu, &templu, &templu, &templu, &templu, &templu, &tempd); 
             
+
+            r = strpbrk(COMM, check);
+            //issues reading file for PPID of (Web content)
+            if(r == 0){
+                fscanf(file, "%d %s %c %d %d*", 
+            &PID, COMM, &tempc, &tempd, &PPID ); 
+            
+                
+                COMM = "(Web Content)";
+
+            }
+            
+            fclose(file);
+            
             //current problem: parsing /proc/<PID>/stat is messed up
-            printf("tempc: %s\n", &tempc);
-            printf("PID: %d\n", PID);
+
+
+          
+            printf("COMM: %s\n", COMM);
+            printf("PPID: %d\n", PPID);
+          
+            PID = 0;
+            
+            PPID = 0;
+            MEMORY = 0;
             memset(&filepath[0], 0, 32 ); //clear filepath for the next pid  
+
+
 
         }
         
 
     }
-    
+
     closedir(dr);
     return 0;
 
