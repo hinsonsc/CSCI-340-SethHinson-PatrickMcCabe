@@ -48,7 +48,7 @@ int main(int argc, char *argv[]){
             //operations to open the file
             FILE *file;
             char buf[255];
-            printf("filepath: %s\n", filepath);
+            //printf("filepath: %s\n", filepath);
             file = fopen(filepath, "r");
             
             // dummy variables for parsing 
@@ -89,11 +89,9 @@ int main(int argc, char *argv[]){
 
 
           
-            printf("COMM: %s\n", COMM);
-            printf("PPID: %d\n", PPID);
+            printf("(%d) %s %d kb\n", PID, COMM, PPID);
           
             PID = 0;
-            
             PPID = 0;
             MEMORY = 0;
             memset(&filepath[0], 0, 32 ); //clear filepath for the next pid  
