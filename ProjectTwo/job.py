@@ -41,5 +41,20 @@ class job:
         return self.endTime
 
     def __str__(self):
+        
         returnStr = str(self.jobID) + '\t' + str(self.runtimeLength) + '\t' + str(self.memorySize)
         return returnStr
+    
+    def run(self):
+
+        self.runtimeLength = self.runtimeLength - 1
+    
+    def isComplete(self):
+
+        if(self.runtimeLength == 0):
+
+            self.setStatus('Completed')
+            return True 
+        
+        else:
+            return False
