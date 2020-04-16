@@ -5,15 +5,19 @@
 #include <assert.h>
 #include <unistd.h>
 #include <string.h>
+#include <malloc.h>
 
 //Global variables
 int wordCount = 0;
 #define BUFSIZE 100
+FILE *fp;
+char buff[BUFSIZE];
 
 char *bruce_buffer[5000][BUFSIZE];
 
 sem_t full;
 sem_t empty;
+sem_t mutex;
 
 const int MAX = 15;
 int done = 0;
@@ -40,6 +44,8 @@ typedef struct {
 
 } queue_t;
 
+queue_t *Q;
+
 // Code taken from Queue_V1.c 
 
 void Queue_Init(queue_t *q) {
@@ -53,8 +59,6 @@ void Queue_Init(queue_t *q) {
     
 }
 
-//Initialize the queue
-queue_t *Q;
 
 // Code taken from Queue_V1.c 
 
@@ -112,11 +116,14 @@ int countWords (char buffer[]){
             
             if ((buffer[counter] == ' ' || buffer[counter] == '\n' || buffer[counter] == '\0') 
                 && (buffer[counter - 1] != ' ')){
-
+                
+                sem_wait(&mutex);
                 wordCount++;
+                sem_post(&mutex);
 
             }
 
+            
             counter++;
 
         }
@@ -134,24 +141,26 @@ void *consumer(void* arg){
 
     sem_wait(&empty);
 
-    char buff;
+    int locate;
 
-    Queue_Dequeue(Q, buff);
+    Queue_Dequeue(Q, locate);
+
+    char michael_buffer = bruce_buffer[locate];
 
     sem_post(&full);
 
-    countWords(buff);
+    countWords(michael_buffer);
 
     return NULL;
 }
 
-void *producer(void * arg){
+void *producer(){
 
-    char file = (char)arg; 
+    //char file = (char)arg; 
 
-    FILE *fp = fopen(file, "r"); 
+    //FILE *fp = fopen(file, "r"); 
 
-    char buff[BUFSIZE]; 
+     
 
     while(fgets(buff, BUFSIZE - 1, fp) != NULL) {
             
@@ -177,36 +186,54 @@ void *producer(void * arg){
 
 }
 
+
+
 int main(int argc, char *argv[]){
 
+    //Initialize the queue
     
 
-    Queue_Init(Q);
+    if (argc != 3){
 
-    
-
-    if (sizeof(argv) != 3){
-
-        printf("Usage: ./projectThree <filename or path> <number of threads>");
+        printf("Usage: ./projectThree <filename or path> <number of threads>\n");
+        exit(1);
 
     }
 
     sem_init(&full, 0, 15);
     sem_init(&empty, 0, 0);
+    sem_init(&mutex, 0, 1);
 
-    char filename = argv[1];
+
+    printf("argc: %d\n", argc);
+    printf("Argv[0]: %s", *argv[0]);
+    //printf("Filename: %s\n", filename);
+    fp = NULL;
+    fp = fopen(argv[1], "r");
+
+    if (fp == NULL){
+
+        printf("File failed!\n");
+        exit(1);
+
+    }
+
+    Q = malloc(sizeof(node_t) * 15);
+
+    Queue_Init(Q);
+
     int num_threads = atoi(argv[2]);
 
     pthread_t consumers_t [num_threads];
     pthread_t producer_t;
 
-    assert(pthread_create(&producer_t, NULL, (void*)producer, (void *)filename) == 0);
+    assert(pthread_create(&producer_t, NULL, (void*)producer, NULL) == 0);
 
     int thread_args[num_threads];
 
     for (int i = 0; i < argv[2]; i++){
 
-        thread_args[i]= i + 1;
+        thread_args[i]= i;
         assert(pthread_create(&consumers_t[i], NULL, consumer, (void *)&thread_args[i]) == 0);
         
     }
