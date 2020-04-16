@@ -204,10 +204,9 @@ int main(int argc, char *argv[]){
     sem_init(&empty, 0, 0);
     sem_init(&mutex, 0, 1);
 
-
     printf("argc: %d\n", argc);
-    printf("Argv[0]: %s", *argv[0]);
-    //printf("Filename: %s\n", filename);
+    printf("Argv[1]: %s\n", argv[1]);
+    printf("Threads: %s\n", argv[2]);
     fp = NULL;
     fp = fopen(argv[1], "r");
 
