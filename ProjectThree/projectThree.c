@@ -3,17 +3,28 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <assert.h>
+#include <unistd.h>
 #include <string.h>
 
 //Global variables
 int wordCount = 0;
-FILE *inputFile;
+#define BUFSIZE 100
+
+char *bruce_buffer[5000][BUFSIZE];
+
+sem_t full;
+sem_t empty;
+
+const int MAX = 15;
+int done = 0;
+
+int q_num = 0;
 
 // Code taken from Queue_V1.c 
 
 typedef struct __node_t {
     
-    int               value;
+    int              value;
     struct __node_t * next;
     
 } node_t;
@@ -31,29 +42,46 @@ typedef struct {
 
 // Code taken from Queue_V1.c 
 
-void Queue_Enqueue(queue_t * q,
-                   int       value) {
+void Queue_Init(queue_t *q) {
+    
+    node_t *tmp = malloc(sizeof(node_t));
+    tmp->next = NULL;
+    q->head = q->tail = tmp;
+    
+    pthread_mutex_init(&q->head_lock, NULL);
+    pthread_mutex_init(&q->tail_lock, NULL);
+    
+}
+
+//Initialize the queue
+queue_t *Q;
+
+// Code taken from Queue_V1.c 
+
+void Queue_Enqueue(queue_t * q, int value) {
     
     node_t *tmp = malloc(sizeof(node_t));
     assert(tmp != NULL);
     tmp->value = value;
     tmp->next  = NULL;
 
+    sem_wait(&full);
     pthread_mutex_lock(&q->tail_lock);
     q->tail->next = tmp;
     q->tail = tmp;
+    sem_post(&empty);
     pthread_mutex_unlock(&q->tail_lock);
     
 }
 
 // Code taken from Queue_V1.c 
 
-int Queue_Dequeue(queue_t * q,
-                  int *     value) {
+int Queue_Dequeue(queue_t * q,int *value) {
 
-    // Failure is always an option
+    // Failure is always msan option
     int rc = -1;
     
+    sem_wait(&empty);
     pthread_mutex_lock(&q->head_lock);
     
     node_t *tmp = q->head;
@@ -64,64 +92,156 @@ int Queue_Dequeue(queue_t * q,
         free(tmp);
         rc = 0;
     }
-     
+
+    sem_post(&full);
     pthread_mutex_unlock(&q->head_lock);
     
     return rc;
 
 }
 
-int countWords(){
+
+
+int countWords (char buffer[]){
+
+    int counter = 0;
+
+    if (strlen(buffer) > 2) {
+
+        while(counter < strlen(buffer)){
+            
+            if ((buffer[counter] == ' ' || buffer[counter] == '\n' || buffer[counter] == '\0') 
+                && (buffer[counter - 1] != ' ')){
+
+                wordCount++;
+
+            }
+
+            counter++;
+
+        }
+
+    }
+    //printf("Buffer: %s\n", buffer);
 
     return 0;
+
+}
+
+void *consumer(void* arg){
+
+    int t_id = (long)arg;
+
+    sem_wait(&empty);
+
+    char buff;
+
+    Queue_Dequeue(Q, buff);
+
+    sem_post(&full);
+
+    countWords(buff);
+
+    return NULL;
+}
+
+void *producer(void * arg){
+
+    char file = (char)arg; 
+
+    FILE *fp = fopen(file, "r"); 
+
+    char buff[BUFSIZE]; 
+
+    while(fgets(buff, BUFSIZE - 1, fp) != NULL) {
+            
+            sem_wait(&full);
+            
+            Queue_Enqueue(Q, q_num);
+            q_num++;
+
+            *bruce_buffer[q_num - 1] = buff;
+
+            sem_post(&empty);
+
+            //printf("Buff: %s\n", buff);
+            //printf("Word count: %d\n", wordCount);
+
+    }
+
+    fclose(fp);
+
+    done = 1;
+
+    return NULL;
 
 }
 
 int main(int argc, char *argv[]){
- 
-    char str [256];
-    char fileName = argv[1]; 
-    char *newLine;
 
-    if (fgets(fileName, sizof(fileName), stdin)){ 
+    
 
-        perror("File was not opened");
-        return -1;
+    Queue_Init(Q);
+
+    
+
+    if (sizeof(argv) != 3){
+
+        printf("Usage: ./projectThree <filename or path> <number of threads>");
+
+    }
+
+    sem_init(&full, 0, 15);
+    sem_init(&empty, 0, 0);
+
+    char filename = argv[1];
+    int num_threads = atoi(argv[2]);
+
+    pthread_t consumers_t [num_threads];
+    pthread_t producer_t;
+
+    assert(pthread_create(&producer_t, NULL, (void*)producer, (void *)filename) == 0);
+
+    int thread_args[num_threads];
+
+    for (int i = 0; i < argv[2]; i++){
+
+        thread_args[i]= i + 1;
+        assert(pthread_create(&consumers_t[i], NULL, consumer, (void *)&thread_args[i]) == 0);
         
     }
-    
-    newLine = strchr(fileName, "\n");
 
-    if (newLine){
+    while(1 == 1){
 
-        *newLine = "\n";
+        int val;
+        sem_getvalue(&empty, val);
 
-    }
+        if((done == 1) && (val <= 0)){
 
-    inputFile = fopen(fileName, "r");
+            for(int i = 0; i < num_threads; i++){
 
-    if (inputFile) {
-    
-        int chr;
-    
-        while ((chr = fgetc(inputFile)) != EOF){
-    
-            fputc(chr, stdout);
-            
+                assert(pthread_join(consumers_t[i], NULL) == 0);
+
+            }
+
         }
-    
-        fclose(inputFile);
-    
-    } 
 
-    else {
-
-        printf("File not found.");
-    
     }
 
-    printf("\n");
+    
 
-    return 0;
+    printf("Word count: %d\n", wordCount);
 
+    
 }
+
+/**
+ * 
+ * pthread_t thread;
+            threads[i] = thread;
+           
+            pthread_create(&threads[i], NULL, countWords, buff); 
+ * 
+ * 
+ * 
+*/ 
