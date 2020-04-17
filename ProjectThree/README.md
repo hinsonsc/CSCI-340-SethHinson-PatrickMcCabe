@@ -1,5 +1,5 @@
 # Project 3 README
 
 ## How to run the program:
-1. `make` and `make clean`
-2. `./projectThree <text-file> <number of threads>`
+1. Pre-requisites: golang 1.14
+2. `go run projectThree.go [number of tasks] < [filename]`
